@@ -83,12 +83,32 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>　　良好的代码规范有助于项目的维护和新人的上手。前段时间把eslint引入了项目中做静态代码检查。一下把所有的代码都改造是不可能的，要改的地方太多了，而且还要保证后来提交的质量。于是有了eslint + pre-commit 的结合。<br>　　pre-commit是git的钩子，顾名思义就是在提交前执行，所以一般用于代码检查、单元测试。git还有其他钩子，比如prepare-commit-msg、pre-push等，具体可查看<a href="https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks" target="_blank" rel="external">git官网</a>.git钩子目录在.git/hooks下(如下图):<br></p>
+        <p>　　良好的代码规范有助于项目的维护和新人的快速上手。前段时间，把eslint引入了项目中做静态代码检查。 一下把所有的代码都改造是不可能，要改的地方太多，而且要保证后来提交代码的质量。于是有了eslint + pre-commit 的结合。<br>　　pre-commit是git的钩子，顾名思义就是在提交前运行，所以一般用于代码检查、单元测试。git还有其他钩子，比如prepare-commit-msg、pre-push等，具体可查看<a href="https://git-scm.com/book/en/v2/Customizing-Git-Git-Hooks" target="_blank" rel="external">git官网</a>。git 钩子目录在.git/hooks下（如下图）：<br><img src="http://upload-images.jianshu.io/upload_images/4928078-3e45a2c94dc9fcd8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="git-hooks.png"><br>　　上图这些文件都是对应钩子的示例脚本，.sample后缀都是出于未启动状态。对应的钩子要生效，把.sample去掉。示例都是用shell脚本写的。那如果想用js写怎么办呢？需要借助<a href="https://github.com/observing/pre-commit" target="_blank" rel="external">pre-commit库</a>：</p>
+<ol>
+<li><p>安装pre-commit</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">npm install pre-commit --save-dev</div></pre></td></tr></table></figure>
+</li>
+<li><p>配置package.json</p>
+<ul>
+<li>执行静态文件检查<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">// package.json</div><div class="line">&quot;scripts&quot;: &#123;</div><div class="line">    &quot;lint&quot;: &quot;eslint src --ext .js --cache --fix&quot;,</div><div class="line">  &#125;,</div><div class="line">  &quot;pre-commit&quot;: [</div><div class="line">    &quot;lint&quot;,</div><div class="line">  ]</div></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ol>
+<p>上面配置会保证eslint在提交时会校验src目录下的js文件。<br>那如果要动态获取提交的代码进行校验呢？</p>
+<ul>
+<li><p>校验提交代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">// 获取修改后的js文件</div><div class="line">git diff HEAD --name-only| grep .js$</div></pre></td></tr></table></figure>
+<p>package.json文件可改为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">  // package.json</div><div class="line">&quot;scripts&quot;: &#123;</div><div class="line">       &quot;lint&quot;: &quot;eslint src --ext .js --cache --fix&quot;,</div><div class="line">       &quot;pre-lint&quot;: &quot;node check.js&quot;</div><div class="line">  &#125;,</div><div class="line">  &quot;pre-commit&quot;: [</div><div class="line">       &quot;pre-lint&quot;,</div><div class="line">  ]</div></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>在check.js中需要调用eslint的Node.js API，详情可看<a href="http://eslint.org/docs/developer-guide/nodejs-api" target="_blank" rel="external">eslint官网</a>。以下是我在项目中的例子，可作为参考：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line">// check.js</div><div class="line">const exec = require(&apos;child_process&apos;).exec</div><div class="line">const CLIEngine = require(&apos;eslint&apos;).CLIEngine</div><div class="line">const cli = new CLIEngine(&#123;&#125;)</div><div class="line">function getErrorLevel(number) &#123;</div><div class="line">       switch (number) &#123;</div><div class="line">          case 2:</div><div class="line">            return &apos;error&apos;</div><div class="line">          case 1:</div><div class="line">            return &apos;warn&apos;</div><div class="line">         default:</div><div class="line">       &#125;</div><div class="line">       return &apos;undefined&apos;</div><div class="line">&#125;</div><div class="line">let pass = 0</div><div class="line">exec(&apos;git diff --cached --name-only| grep .js$&apos;, (error, stdout) =&gt; &#123;</div><div class="line">    if (stdout.length) &#123;</div><div class="line">        const array = stdout.split(&apos;\n&apos;)</div><div class="line">        array.pop()</div><div class="line">        const results = cli.executeOnFiles(array).results</div><div class="line">        let errorCount = 0</div><div class="line">        let warningCount = 0</div><div class="line">        results.forEach((result) =&gt; &#123;</div><div class="line">            errorCount += result.errorCount</div><div class="line">            warningCount += result.warningCount</div><div class="line">            if (result.messages.length &gt; 0) &#123;</div><div class="line">                console.log(&apos;\n&apos;)</div><div class="line">                console.log(result.filePath)</div><div class="line">                result.messages.forEach((obj) =&gt; &#123;</div><div class="line">                    const level = getErrorLevel(obj.severity)</div><div class="line">                    console.log(`   $&#123;obj.line&#125;:$&#123;obj.column&#125;  $&#123;level&#125;  $&#123;obj.message&#125;  $&#123;obj.ruleId&#125;`)</div><div class="line">                    pass = 1</div><div class="line">                &#125;)</div><div class="line">            &#125;</div><div class="line">        &#125;)</div><div class="line">        if (warningCount &gt; 0 || errorCount &gt; 0) &#123;</div><div class="line">            console.log(`\n   $&#123;errorCount + warningCount&#125; problems ($&#123;errorCount&#125; $&#123;&apos;errors&apos;&#125; $&#123;warningCount&#125; warnings)`)</div><div class="line">        &#125;</div><div class="line">        process.exit(pass)</div><div class="line">    &#125;</div><div class="line">    if (error !== null) &#123;</div><div class="line">        console.log(`exec error: $&#123;error&#125;`)</div><div class="line">    &#125;</div><div class="line">&#125;)</div></pre></td></tr></table></figure></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://localhost:4000/2017/04/06/eslin+pre-commit检测代码/" data-id="cj16h6rbq0001lgr3zt1bc0we" class="article-share-link">Share</a>
+      <a data-url="http://localhost:4000/2017/04/06/eslin+pre-commit检测代码/" data-id="cj19dk4ez0001mgr3ukkrof8y" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/eslint、pre-commit、npm-script/">eslint、pre-commit、npm script</a></li></ul>
@@ -182,7 +202,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://localhost:4000/2017/03/05/Markdown常用命令及其效果/" data-id="cj16h6rbk0000lgr3qm38q8sb" class="article-share-link">Share</a>
+      <a data-url="http://localhost:4000/2017/03/05/Markdown常用命令及其效果/" data-id="cj19dk4et0000mgr3gm4da4zl" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Markdown-语法/">Markdown 语法</a></li></ul>
